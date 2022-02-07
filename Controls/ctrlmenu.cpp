@@ -35,19 +35,22 @@ void CtrlMenu::init()
 {
     this->setMinimumWidth(this->minWidth);
     this->setMaximumWidth(this->maxWidth);
-    this->setStyleSheet(".QWidget{background-color:gray;}");
+    this->setFixedWidth(this->minWidth);
+    this->setStyleSheet("QWidget{background-color:gray;}");
     this->setWindowFlags(Qt::WindowStaysOnTopHint);
     this->setMouseTracking(true);
     back = new QWidget(this);
-    back->resize(this->size());
-    back->installEventFilter(this);
-    layout = new QGridLayout(back);
     stateWidget = new QWidget(this);
     labNetState = new QPushButton(stateWidget);
+    back->resize(this->width(), 200);
+    //back->setStyleSheet("QWidget{background-color:gray;}");
+    back->installEventFilter(this);
+    back->move(0, 300);
+    layout = new QGridLayout(back);
+    stateWidget->resize(this->width() - 8*2, 60);
+    stateWidget->move(8, this->height() - stateWidget->height() - 8);
     labNetState->resize(14,14);
-
-
-    btmWidget = new QWidget(this);
+    //btmWidget = new QWidget(this);
     //stateWidget->setMinimumHeight(100);
     initCtrl(this->ctrlCount);
     labNetState->move(0,  stateWidget->height() - labNetState->height());
@@ -57,30 +60,33 @@ void CtrlMenu::init()
 
 void CtrlMenu::initCtrl(int ctrlcount)
 {
-    layout->addWidget(btmWidget ,0 ,0 ,2 ,1 );
+    //layout->addWidget(btmWidget ,0 ,0 ,2 ,1 );
     for(int i = 0;i < ctrlcount; i++){
         QPushButton *btn = new QPushButton(this);
         btn->setFixedHeight(40);
         layout->addWidget(btn, i + 1, 0, 1, 1);
         btns.append(btn);
     }
-    layout->addWidget(stateWidget ,ctrlcount + 1,0 ,ctrlcount - 1 ,1);
+    //layout->addWidget(stateWidget ,ctrlcount + 1,0 ,ctrlcount - 1 ,1);
 }
 
 void CtrlMenu::mouseMoveEvent(QMouseEvent *event)
 {
-    this->setFixedWidth(maxWidth);
+    //this->setFixedWidth(maxWidth);
 }
 
 void CtrlMenu::enterEvent(QEvent *event)
 {
-    this->setFixedWidth(maxWidth);
+    //this->setFixedWidth(maxWidth);
 }
 
 void CtrlMenu::resizeEvent(QResizeEvent *event)
 {
-    back->resize(this->size());
-    labNetState->move(0,  stateWidget->height() - labNetState->height());
+    back->resize(this->width(), 200);
+    stateWidget->resize(this->width() - 4*2, 60);
+    stateWidget->move(8, this->height() - stateWidget->height() - 8);
+
+    //labNetState->move(0,  stateWidget->height() - labNetState->height());
 }
 
 void CtrlMenu::leaveEvent(QEvent *event)

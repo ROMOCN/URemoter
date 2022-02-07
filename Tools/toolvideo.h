@@ -25,8 +25,10 @@ public:
     QImage MatImageToQt(const Mat &src);
 signals:
     void pullImage(QImage img);
+    void signalStart();
 private:
     void running();
+    void startCamera();
 
 
 };

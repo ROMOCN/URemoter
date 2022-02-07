@@ -25,6 +25,7 @@ void CtrlInfoWidget::initCtrl()
     labSIDName = new QLabel("本机识别码" ,groupShow);
     labIIDName = new QLabel("房间识别码" ,groupInput);
     labSID = new QLabel("" ,groupShow);
+
     editIID = new QLineEdit(groupInput);
     btnSCreate = new QPushButton("创建房间", groupShow);
     btnIJoin = new QPushButton("加入房间", groupInput);
@@ -46,6 +47,7 @@ void CtrlInfoWidget::initCtrl()
     labIIDName->setFont(fontSmall);
     labSID->move(10 ,labSIDName->y() + labSIDName->height() + 30);
     labSID->setFont(fontBig);
+    labSID->setFixedWidth(groupShow->width());
     editIID->move(10 ,labIIDName->y() + labIIDName->height() + 30);
     editIID->setFont(fontBig);
     editIID->setFixedWidth(groupInput->width() - 20 );

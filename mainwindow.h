@@ -34,6 +34,7 @@ class MainWindow : public QWidget
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void startOrStop();
     void slotRecVideo(QImage img);
     void slotRecvAudio(QByteArray audio);
     void slotPullVideo(QImage img);

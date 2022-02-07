@@ -7,6 +7,7 @@
 #include <QGridLayout>
 #include <QMouseEvent>
 #include <QLabel>
+#include <QGroupBox>
 class CtrlMenu : public QWidget
 {
     Q_OBJECT

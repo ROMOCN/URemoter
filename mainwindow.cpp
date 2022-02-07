@@ -17,6 +17,17 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::startOrStop()
+{
+    if(t_video->isRunning()){
+        t_video->stop();
+        tAudio->stopRecord();
+    }else{
+        t_video->start();
+        tAudio->startRecord();
+    }
+}
+
 void MainWindow::slotRecVideo(QImage img)
 {
     img = img.mirrored(true, false);
@@ -99,18 +110,6 @@ void MainWindow::initSignal()
     connect(infoWidget, &CtrlInfoWidget::signalJoinRoom, this, &MainWindow::slotJoinRoom);
     connect(udpClient, &UDPClient::signalAudio, this, &MainWindow::slotRecVideo);
     connect(tcpClient,&TCPClient::signalNetState, menuEdge, &CtrlMenu::setNetState);
-    QPushButton *btn = new QPushButton("录制",this);
-    btn->move(80,0);
-    connect(btn, &QPushButton::clicked,[=](){
-        if(t_video->isRunning()){
-            t_video->stop();
-            tAudio->stopRecord();
-        }else{
-            t_video->start();
-            tAudio->startRecord();
-
-        }
-    });
     connect(t_video, &ToolVideo::pullImage, this, &MainWindow::slotPullVideo);
     connect(tAudio, &ToolAudio::signalPushSound, this ,&MainWindow::slotPullAudio);
 }
@@ -153,6 +152,7 @@ void MainWindow::slotCreateRoom()
 {
     infoWidget->hide();
     lab_video->show();
+    startOrStop();
     QByteArray s = CMD::JsonTool::creatRoom(UID);
     tcpClient->sendData(s.data(), s.size());
 }
@@ -161,6 +161,7 @@ void MainWindow::slotJoinRoom(int roomID)
 {
     infoWidget->hide();
     lab_video->show();
+    startOrStop();
     QByteArray data = CMD::JsonTool::joinRoom(roomID);
     int sendret =  tcpClient->sendData(data.data(), data.size());
 }
