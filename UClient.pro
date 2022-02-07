@@ -1,5 +1,5 @@
-QT       += core gui
-
+QT += core gui
+QT += multimedia
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
@@ -18,6 +18,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     Client/tcpclient.cpp \
     Client/udpclient.cpp \
+    Controls/ctrlinfowidget.cpp \
+    Controls/ctrlmenu.cpp \
+    Tools/toolaudio.cpp \
+    Tools/toolsound.cpp \
+    Tools/toolvideo.cpp \
+    VideoWidget//videopanel.cpp \
+    VideoWidget/videowidget.cpp \
     main.cpp \
     mainwindow.cpp
 
@@ -25,6 +32,14 @@ HEADERS += \
     Client/sockcmd.h \
     Client/tcpclient.h \
     Client/udpclient.h \
+    Controls/ctrlinfowidget.h \
+    Controls/ctrlmenu.h \
+    Tools/toolaudio.h \
+    Tools/toolscreen.h \
+    Tools/toolsound.h \
+    Tools/toolvideo.h \
+    VideoWidget/videopanel.h \
+    VideoWidget/videowidget.h \
     mainwindow.h
 
 FORMS += \
@@ -36,6 +51,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 LIBS += -lpthread libwsock32 libws2_32
+LIBS += -lWinMM
 
 INCLUDEPATH += C:\Opencv\OpenCV-MinGW-Build-OpenCV-4.5.2-x64\include
 LIBS += C:\Opencv\opencv\opencv_build\lib\libopencv_*.a

@@ -1,8 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QMetaObject>
-#include <QPushButton>
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
@@ -14,157 +13,190 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    client->close_sock();
-    // 释放VideoCapture资源
-    capture.release();
+    udpClient->close_sock();
     delete ui;
 }
 
-void MainWindow::slotVideo(QImage img)
+void MainWindow::slotRecVideo(QImage img)
 {
     img = img.mirrored(true, false);
-    lab_video->setPixmap(QPixmap::fromImage(img.scaled(this->size())));
+    lab_video->setVideo(img, 1);
+}
+
+void MainWindow::slotRecvAudio(QByteArray audio)
+{
+    tAudio->soltPlay(audio);
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
-    lab_video->resize(this->size());
-//    //# 设置摄像头分辨率的高
-//    capture.set(CAP_PROP_FRAME_HEIGHT, this->size().width());
-//    //# 设置摄像头分辨率的宽
-//    capture.set(CAP_PROP_FRAME_WIDTH, this->size().height());
+    lab_video->resize(this->size().width() - 80, this->size().height());
+    menuEdge->resize(80, this->size().height());
 }
 
 
 void MainWindow::init()
 {
-    lab_video = new QLabel(this);
-    lab_video->move(0,0);
-    client = new UDPClient();
-    timer = new QTimer();
-    QPushButton *btn = new QPushButton("录制",this);
+    this->resize(1200 ,900 );
     QString msg;
-//    //# 设置摄像头分辨率的高
-//    capture.set(CAP_PROP_FRAME_HEIGHT, this->size().width());
-//    //# 设置摄像头分辨率的宽
-//    capture.set(CAP_PROP_FRAME_WIDTH, this->size().height());
-    btn->move(0,0);
-    client->initial_sock(msg);
-    client->bindPort("0.0.0.0", 8888);
-    connect(client, &UDPClient::signalAudio, this, &MainWindow::slotVideo);
-    connect(timer,&QTimer::timeout,this,&MainWindow::play);
-//    connect(btn, &QPushButton::clicked,[=](){
-//        QMetaObject::invokeMethod(this, "start", Qt::AutoConnection);  //需添加标记 Q_INVOKABLE  Qt::DirectConnection
-//    });
-    connect(btn, &QPushButton::clicked,this, &MainWindow::start);
-    std::thread *t = new std::thread([=](){
+    t_video = new ToolVideo(this);
+    udpClient = new UDPClient();
+    tcpClient = new TCPClient();
+    menuEdge = new CtrlMenu(this);
+    infoWidget = new CtrlInfoWidget(this);
+    lab_video = new VideoWidget(this);
+    tAudio = new ToolAudio(this);
+    infoWidget->move(menuEdge->minWidth, 0);
+    {
+        QSize size = this->size();
+        size -= infoWidget->size();
+        infoWidget->move(size.width()/2, size.height()/2);
+    }
+    menuEdge->move(0, 0);
+    menuEdge->resize(menuEdge->minWidth, this->width());
+    lab_video->hide();
+    initSignal();
+
+    udpClient->initial_sock(msg);
+    udpClient->bindPort("0.0.0.0", 8888);
+    tcpClient->initial_sock(msg);
+    tcpClient->connect_server("192.168.1.103", 8000, msg);
+    lab_video->move(menuEdge->minWidth,0);
+    lab_video->setWindowFlags(lab_video->windowFlags() | Qt::WindowStaysOnBottomHint);
+
+
+    initThread();
+}
+
+void MainWindow::initThread()
+{
+    std::thread *tcpThread = new std::thread([=](){
         QString msg;
-        while(true)
-        {
-            client->run_select(msg);
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        while(true){
+            tcpClient->run_select(msg);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     });
-    t->detach();
-
+    tcpThread->detach();
+    std::thread *udpThread = new std::thread([=](){
+        QString msg;
+        while(true){
+            udpClient->run_select(msg);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    });
+    udpThread->detach();
 }
-void MainWindow::start()
-{
 
-    if(capture.isOpened())
-    {
-        capture.release();
-        timer->stop();
-        lab_video->clear();
-    }else
-    {
-        std::thread *t = new std::thread([=](){
-            capture.open(0);
-        });
-        timer->start(30);
+void MainWindow::initSignal()
+{
+    //qRegisterMetaType<QByteArray>("QByteArray");
+    connect(tcpClient, &TCPClient::signalRecv, this, &MainWindow::signalTCPRecv);
+    connect(udpClient, &UDPClient::signalRecv, this, &MainWindow::signalUDPRecv);
+    connect(this, &MainWindow::signalTCPRecv, this, &MainWindow::slotTCPRecv);
+    connect(this, &MainWindow::signalUDPRecv, this, &MainWindow::slotUDPRecv);
+    connect(infoWidget, &CtrlInfoWidget::signalCreateRoom, this, &MainWindow::slotCreateRoom);
+    connect(infoWidget, &CtrlInfoWidget::signalJoinRoom, this, &MainWindow::slotJoinRoom);
+    connect(udpClient, &UDPClient::signalAudio, this, &MainWindow::slotRecVideo);
+    connect(tcpClient,&TCPClient::signalNetState, menuEdge, &CtrlMenu::setNetState);
+    QPushButton *btn = new QPushButton("录制",this);
+    btn->move(80,0);
+    connect(btn, &QPushButton::clicked,[=](){
+        if(t_video->isRunning()){
+            t_video->stop();
+            tAudio->stopRecord();
+        }else{
+            t_video->start();
+            tAudio->startRecord();
+
+        }
+    });
+    connect(t_video, &ToolVideo::pullImage, this, &MainWindow::slotPullVideo);
+    connect(tAudio, &ToolAudio::signalPushSound, this ,&MainWindow::slotPullAudio);
+}
+
+void MainWindow::slotTCPRecv(QByteArray data)
+{
+    const QString cmd = "ENUM_CMD";
+    const QString streamType = "ENUM_STREAM";
+    ENUM_CMD c = (ENUM_CMD)CMD::JsonTool::analyseID(data, cmd);
+    switch (c) {
+    case CMD_SENDUID:{
+        int uid = CMD::JsonTool::analyseID(data,"UID");
+        UID = uid == 0? 0:  uid;
+        infoWidget->setRoomID(uid);
+    }
+        break;
     }
 }
 
-void MainWindow::play()
+void MainWindow::slotUDPRecv(QByteArray data)
 {
-    if(capture.isOpened()){
-        Mat frame;
-        capture >> frame;
-        QImage imag = MatImageToQt(frame);
+    CMD::ENUM_STREAM myStream;
+    QByteArray baseData = QByteArray::fromBase64(CMD::JsonTool::analyseData(data, "Data", myStream));
+    switch (myStream) {
+    case ENUM_STREAM::STREAM_VIDEO:
+    {
+        QImage image;
+        if(image.loadFromData(baseData))
+            slotRecVideo(image);
+    }
+        break;
+    case ENUM_STREAM::STREAM_AUDIO:
+        slotRecvAudio(baseData);
+        break;
+    }
+
+}
+
+void MainWindow::slotCreateRoom()
+{
+    infoWidget->hide();
+    lab_video->show();
+    QByteArray s = CMD::JsonTool::creatRoom(UID);
+    tcpClient->sendData(s.data(), s.size());
+}
+
+void MainWindow::slotJoinRoom(int roomID)
+{
+    infoWidget->hide();
+    lab_video->show();
+    QByteArray data = CMD::JsonTool::joinRoom(roomID);
+    int sendret =  tcpClient->sendData(data.data(), data.size());
+}
+
+void MainWindow::slotPullVideo(QImage img)
+{
         int size = 0;
-        QByteArray buff = imgToQByte(imag);
+        QByteArray buff = imgToQByte(img);
         size = buff.size();
 //        //数据加密
 //        QByteArray base64Byte = buff.toBase64();
 //        //数据压缩算法
 //        QByteArray compressByte = qCompress(base64Byte,1);
-//        //# 获取视频帧的宽
-//        int w = capture.get(CAP_PROP_FRAME_WIDTH);
-//        //# 获取视频帧的高
-//        int h = capture.get(CAP_PROP_FRAME_HEIGHT);
-//        //# 获取视频帧的帧率
-//        int fps = capture.get(CAP_PROP_FPS);
-        client->sendData("127.0.0.1",8888, buff.data(), buff.size());
-        client->sendData("192.168.1.107",8888, buff.data(), buff.size());
-
-
-    }
-
+        //-----------------json-------------------------
+        QByteArray byteArray = CMD::JsonTool::sendStream(buff);
+        //-----------------json-------------------------
+        //udpClient->sendData("127.0.0.1",8888, byteArray.data(), byteArray.size());
+//        udpClient->sendData("192.168.1.107",8888, byteArray.data(), byteArray.size());
+        udpClient->sendData("192.168.1.103",8001, byteArray.data(), byteArray.size());
+        lab_video->setVideo(img.mirrored(true, false));
 }
 
-QImage MainWindow::MatImageToQt(const Mat &src)
+void MainWindow::slotPullAudio(QByteArray data)
 {
-    //CV_8UC1 8位无符号的单通道---灰度图片
-    if(src.type() == CV_8UC1)
-    {
-        //使用给定的大小和格式构造图像
-        //QImage(int width, int height, Format format)
-        QImage qImage(src.cols,src.rows,QImage::Format_Indexed8);
-        //扩展颜色表的颜色数目
-        qImage.setColorCount(256);
-
-        //在给定的索引设置颜色
-        for(int i = 0; i < 256; i ++)
-        {
-            //得到一个黑白图
-            qImage.setColor(i,qRgb(i,i,i));
-        }
-        //复制输入图像,data数据段的首地址
-        uchar *pSrc = src.data;
-        //
-        for(int row = 0; row < src.rows; row ++)
-        {
-            //遍历像素指针
-            uchar *pDest = qImage.scanLine(row);
-            //从源src所指的内存地址的起始位置开始拷贝n个
-            //字节到目标dest所指的内存地址的起始位置中
-            memcmp(pDest,pSrc,src.cols);
-            //图像层像素地址
-            pSrc += src.step;
-        }
-        return qImage;
-    }
-    //为3通道的彩色图片
-    else if(src.type() == CV_8UC3)
-    {
-        //得到图像的的首地址
-        const uchar *pSrc = (const uchar*)src.data;
-        //以src构造图片
-        QImage qImage(pSrc,src.cols,src.rows,src.step,QImage::Format_RGB888);
-        //在不改变实际图像数据的条件下，交换红蓝通道
-        return qImage.rgbSwapped();
-    }
-    //四通道图片，带Alpha通道的RGB彩色图像
-    else if(src.type() == CV_8UC4)
-    {
-        const uchar *pSrc = (const uchar*)src.data;
-        QImage qImage(pSrc, src.cols, src.rows, src.step, QImage::Format_ARGB32);
-        //返回图像的子区域作为一个新图像
-        return qImage.copy();
-    }
-    else
-    {
-        return QImage();
-    }
+    int size = 0;
+    QByteArray buff(data);
+    size = buff.size();
+//  //数据加密
+//  QByteArray base64Byte = buff.toBase64();
+//  //数据压缩算法
+//  QByteArray compressByte = qCompress(base64Byte,1);
+    //-----------------json-------------------------
+    QByteArray byteArray = CMD::JsonTool::sendStream(buff.toBase64(), ENUM_STREAM::STREAM_AUDIO);
+    //-----------------json-------------------------
+    //udpClient->sendData("127.0.0.1",8888, byteArray.data(), byteArray.size());
+//        udpClient->sendData("192.168.1.107",8888, byteArray.data(), byteArray.size());
+    udpClient->sendData("192.168.1.103",8001, byteArray.data(), byteArray.size());
 }
 

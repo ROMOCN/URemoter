@@ -3,34 +3,41 @@
 
 #include <QWidget>
 #include <QLabel>
-#include "Client/udpclient.h"
-
 #include <QBuffer>
-#include <QTimer>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-using namespace cv;
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QMetaObject>
+#include <QPushButton>
+#include "Client/udpclient.h"
+#include "Client/tcpclient.h"
+#include "Tools/toolvideo.h"
+#include "Tools/toolaudio.h"
+#include "VideoWidget/videowidget.h"
+#include "Controls/ctrlmenu.h"
+#include "Controls/ctrlinfowidget.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
-
-
 class MainWindow : public QWidget
 {
     Q_OBJECT
-    UDPClient *client = nullptr;
-    QLabel *lab_video = nullptr;
-    VideoCapture capture;
-    QTimer *timer = nullptr;
+    UDPClient *udpClient = nullptr;
+    TCPClient *tcpClient = nullptr;
+    VideoWidget *lab_video = nullptr;
+    ToolVideo *t_video = nullptr;
+    ToolAudio *tAudio = nullptr;
+    CtrlMenu *menuEdge = nullptr;
+    CtrlInfoWidget *infoWidget = nullptr;
+    int UID = 0;
+    int RoomID = 0;
+     Ui::MainWindow *ui;
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void slotVideo(QImage img);
-    QImage MatImageToQt(const Mat &src);
-    Q_INVOKABLE  void start();
-    void play();
-    void init();
+    void slotRecVideo(QImage img);
+    void slotRecvAudio(QByteArray audio);
+    void slotPullVideo(QImage img);
+    void slotPullAudio(QByteArray data);
     static unsigned char* charToUc(char* read_buff)
     {
         return  reinterpret_cast<unsigned char*> (read_buff);
@@ -54,9 +61,20 @@ public:
         image.loadFromData(imageData);
         return image;
     }
+signals:
+    /*将跨线程信号转为同线程信号*/
+    void signalTCPRecv(QByteArray data);
+    void signalUDPRecv(QByteArray datar);
 
+private slots:
+    void slotTCPRecv(QByteArray data);
+    void slotUDPRecv(QByteArray data);
+    void slotCreateRoom();
+    void slotJoinRoom(int roomID);
 private:
-    Ui::MainWindow *ui;
+    void init();
+    void initThread();
+    void initSignal();
     void resizeEvent(QResizeEvent *event) override;
 };
 #endif // MAINWINDOW_H

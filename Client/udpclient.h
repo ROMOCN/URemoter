@@ -4,9 +4,9 @@
 #include <QObject>
 
 
-#ifndef RECV_BUFF_SIZE
-#define RECV_BUFF_SIZE 102400
-#endif
+//#ifndef RECV_BUFF_SIZE
+//#define RECV_BUFF_SIZE 102400
+//#endif
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -32,25 +32,26 @@
 #include <thread>
 #include <mutex>
 #include <QDebug>
+#include <QJsonObject>
+#include <QJsonDocument>
+
 #include "sockcmd.h"
 using namespace std;
 using namespace CMD;
 class UDPClient : public QObject
 {
     Q_OBJECT
+    const static int RECV_BUFF_SIZE = 102400;
     SOCKET _client;
     int _lastpos;//记录消息长度
     char _msgBuff[RECV_BUFF_SIZE * 10];
     char _recvBuff[RECV_BUFF_SIZE];
-    std::thread *thread_msg;
     mutex _lock; //临界资源保护
     mutex _thread_status; //控制线程开始暂停
-    bool thread_on = true;
     sockaddr_in _sin ={}; //IP地址
     sockaddr_in _addrServer = {};
 public:
-    UDPClient();
-    UDPClient(QObject *parent);
+    UDPClient(QObject *parent = nullptr);
     virtual ~UDPClient();
     int initial_sock(QString &msg);
     int close_sock();
@@ -62,8 +63,9 @@ public:
     int bindPort(const char *ip, unsigned short port);
 signals:
     void signalAudio(QImage img);
+    void signalRecv(QByteArray data);
 private:
-    int data_factory(DataHeader *header);
+    int dataFactory();
 
 };
 

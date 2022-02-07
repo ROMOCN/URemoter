@@ -2,22 +2,18 @@
 
 UDPClient::UDPClient(QObject *parent) : QObject(parent)
 {
-
-}
-
-UDPClient::UDPClient()
-{
     _client = INVALID_SOCKET;
     _recvBuff[RECV_BUFF_SIZE] = {};
     _msgBuff[RECV_BUFF_SIZE * 10] = {};
     _lastpos = 0;
-    //thread_init();
+    //qRegisterMetaType<QByteArray>("QByteArray");
+
 }
+
 
 UDPClient::~UDPClient()
 {
     close_sock();
-    thread_on = false;
 }
 
 int UDPClient::initial_sock(QString &msg)
@@ -82,6 +78,7 @@ int UDPClient::bindPort(const char* ip, unsigned short port)
     return ret;
 }
 
+
 int UDPClient::close_sock()
 {
     if(_client != INVALID_SOCKET)
@@ -99,6 +96,7 @@ int UDPClient::close_sock()
 
 bool UDPClient::run_select(QString &msg)
 {
+    msg = "";
     if(is_run()){
         fd_set fdRead;
         FD_ZERO(&fdRead);
@@ -143,34 +141,48 @@ int UDPClient::recv_data(QString &msg)
 
     }else
     {
-        //QByteArray imageData = QByteArray::fromBase64(QString(_recvBuff).toLatin1());
-        QByteArray baseData = QByteArray::fromBase64(QString(_recvBuff).toLatin1());
-        QImage image;
-        if(image.loadFromData(baseData))
-            emit signalAudio(image);
+        emit signalRecv(_recvBuff);
+        memset(_msgBuff, 0 , RECV_BUFF_SIZE);
+        memset(_recvBuff, 0 , RECV_BUFF_SIZE);
+
+//        QByteArray baseData = QByteArray::fromBase64(strData.toLatin1());
+//        QImage image;
+//        if(image.loadFromData(baseData))
+//            emit signalAudio(image);
     }
     return reasult;
 
 }
 
+
 int UDPClient::sendData(char *ip, int nPort, char *pData, int size)
 {
-    sockaddr_in ser;	// 服务器端地址
-    ser.sin_family = AF_INET;	// IP协议
-    ser.sin_port = htons(nPort);	// 端口号
-    ser.sin_addr.s_addr = inet_addr(ip);	// IP地址
-    int nLen = sizeof(ser);	// 服务器地址长度
+    if(is_run()){
+        sockaddr_in ser;	// 服务器端地址
+        ser.sin_family = AF_INET;	// IP协议
+        ser.sin_port = htons(nPort);	// 端口号
+        ser.sin_addr.s_addr = inet_addr(ip);	// IP地址
+        int nLen = sizeof(ser);	// 服务器地址长度
 
-    QByteArray byte(pData);
-//     //字节数组 要进行传输必须先转换成这个格式
-//     QBuffer buff(&byte);
-//     // 建立一个用于IO读写的缓冲区
-//     image.save(&buff,"JPEG");
-     // image先向下转为byte的类型，再存入buff
-     QByteArray compressByte = qCompress(byte,1);
-     //数据压缩算法
-     QByteArray base64Byte = byte.toBase64();
-    return sendto(_client, (const char*)pData, size, 0, (sockaddr*)&ser, nLen);	// 向服务器发送数据
+        //QByteArray byte(pData);
+    //     //字节数组 要进行传输必须先转换成这个格式
+    //     QBuffer buff(&byte);
+    //     // 建立一个用于IO读写的缓冲区
+    //     image.save(&buff,"JPEG");
+         // image先向下转为byte的类型，再存入buff
+    //     QByteArray compressByte = qCompress(pData,1);
+    //     //数据压缩算法
+    //     QByteArray base64Byte = compressByte.toBase64();
+
+        //合并包头包体
+    //     DataHeader *header = new DataHeader();
+    //     header->datalength = size;
+    //     header->cmd = CMD_CREATROOM;
+    //     char pack[sizeof (DataHeader) + size];
+    //     memcpy(pack, (char*)header, sizeof (DataHeader));
+    //     memcpy(pack + sizeof (DataHeader), pData, size);
+        return sendto(_client, (const char*)pData, size, 0, (sockaddr*)&ser, nLen);	// 向服务器发送数据
+    }
 }
 
 int UDPClient::sendData(char *ip, int nPort, DataHeader *data)
@@ -194,3 +206,41 @@ bool UDPClient::is_run()
     return _client != INVALID_SOCKET;
 }
 
+int UDPClient::dataFactory()
+{
+    while(true){
+        if(is_run() && _lastpos){
+            std::lock_guard<std::mutex> l(_lock);
+
+            //        memcpy(_msgBuff, _recvBuff, nlen);
+            //        _lastpos += nlen;
+            while(_lastpos >= sizeof(DataHeader))
+            {
+                DataHeader* header = nullptr;
+                char headerBuff[sizeof (DataHeader)];
+                memcpy(headerBuff, _msgBuff, sizeof (DataHeader) );
+                header = (DataHeader*)headerBuff;
+                memcpy(_msgBuff, _msgBuff + sizeof (DataHeader),   header->datalength);
+                _lastpos -= sizeof (DataHeader);
+                if(_lastpos >= header->datalength )//&& header->datalength != 0
+                {
+                    int datalen = header->datalength;
+                    int nsize = _lastpos - header->datalength;
+                    {
+                        char dataBuff[datalen];
+                        memcpy(dataBuff, _msgBuff , datalen);
+                        emit signalRecv(dataBuff);
+                    }
+                    memcpy(_msgBuff, _msgBuff + header->datalength, nsize);
+                    _lastpos = nsize;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+
+    }
+}

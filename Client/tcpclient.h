@@ -60,21 +60,12 @@ public:
     bool run_select(QString &msg);
     bool is_run();
     int send_data(DataHeader *data);
+    int sendData(char* data, int len);
 signals:
-    void signal_server_cmd();
-    void signal_log_result(short result);
-    void signal_recv_msg(long long id, QString msg, short cmd);
-    void signal_get_friend(QVariant qvar);
+    void signalRecv(QByteArray data);
+    void signalNetState(int state);
 private:
-//    void thread_init();
-//    void thread_data_fact();
-//    void big_data_factory(long long recv_id,
-//                          long long sour_id,
-//                          char* data,int len,
-//                          ENUM_CMD cmd_kind,
-//                          ENUM_SEND_FORMAT format_kind);
 
-    int data_factory(DataHeader *header);
 
 };
 

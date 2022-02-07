@@ -2,11 +2,19 @@
 
 TCPClient::TCPClient(QObject *parent) : QObject(parent)
 {
+    //qRegisterMetaType<QByteArray>("QByteArray");
+
+    _client = INVALID_SOCKET;
+    _recvBuff[RECV_BUFF_SIZE] = {};
+    _msgBuff[RECV_BUFF_SIZE * 10] = {};
+    _lastpos = 0;
 
 }
 
 TCPClient::TCPClient()
 {
+    //qRegisterMetaType<QByteArray>("QByteArray");
+
     _client = INVALID_SOCKET;
     _recvBuff[RECV_BUFF_SIZE] = {};
     _msgBuff[RECV_BUFF_SIZE * 10] = {};
@@ -22,6 +30,7 @@ TCPClient::~TCPClient()
 
 int TCPClient::initial_sock(QString &msg)
 {
+    msg = "";
 #ifdef _WIN32
     WORD ver = MAKEWORD(2, 2);
     WSADATA dat;
@@ -33,7 +42,7 @@ int TCPClient::initial_sock(QString &msg)
         msg = "旧链接已关闭";
         return -1;
     }
-    _client = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    _client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(_client == INVALID_SOCKET)
     {
         msg = "初始化失败";
@@ -49,7 +58,8 @@ int TCPClient::initial_sock(QString &msg)
 
 int TCPClient::connect_server(char* ip, unsigned short port, QString &msg)
 {
-    int result;
+    int result = 0;
+    msg = "";
     if(_client == INVALID_SOCKET){
         QString rmsg;
         if(initial_sock(rmsg) == -1)
@@ -74,9 +84,10 @@ int TCPClient::connect_server(char* ip, unsigned short port, QString &msg)
         else{
            msg = "成功连接服务器";
            qDebug()<<msg.toStdString().c_str();
-           result = 0;
+
         }
     }
+    emit signalNetState(result + 1);
     return result;
 }
 
@@ -97,9 +108,9 @@ int TCPClient::close_sock()
 
 bool TCPClient::run_select(QString &msg)
 {
+    bool result = true;
     if(is_run())
     {
-        //sendData("127.0.0.1", 8888, "客户端数据包");
         fd_set fdRead;
         FD_ZERO(&fdRead);
         FD_SET(_client, &fdRead);
@@ -108,79 +119,67 @@ bool TCPClient::run_select(QString &msg)
         if(ret < 0)
         {
             msg = "select任务结束";
-            return false;
-        }
-        if(FD_ISSET(_client, &fdRead))
-        {
-            FD_CLR(_client, &fdRead);
-            QString rmsg;
-            if(recv_data(rmsg) == -1)
+            result = false;
+        }else{
+            if(FD_ISSET(_client, &fdRead))
             {
-                msg = "select接收失败;" + rmsg;
-                return false;
+                FD_CLR(_client, &fdRead);
+                QString rmsg;
+                if(recv_data(rmsg) == -1)
+                {
+                    msg = "select接收失败;" + rmsg;
+                    result = false;
+                }
             }
         }
-        return true;
+    }else{
+        result = false;
     }
-    return false;
+    return result;
 }
 int TCPClient::recv_data(QString &msg)
 {
+    memset(_msgBuff, 0 , RECV_BUFF_SIZE);
+    memset(_recvBuff, 0 , RECV_BUFF_SIZE);
+
     int nlen = (int)recv(_client, _recvBuff, RECV_BUFF_SIZE, 0);
     if(nlen < 0)
     {
-        msg = "与服务器连接中断";
+        msg = "Lost connection to server";
+        emit signalNetState(0);
         qDebug()<<msg;
-
+        connect_server("192.168.1.102", 8000, msg);
         return -1;
     }
-    memcpy(_msgBuff, _recvBuff, nlen);
-    _lastpos += nlen;
-    while(_lastpos >= sizeof(DataHeader))
-    {
-        DataHeader* header = (DataHeader*)_msgBuff;
-        if(_lastpos >= header->datalength )//&& header->datalength != 0
-        {
-            int t = header->datalength;
-            int nsize = _lastpos - header->datalength;
-            data_factory(header);
-            memcpy(_msgBuff, _msgBuff + header->datalength, nsize);
-            _lastpos = nsize;
-        }
-        else
-        {
-            break;
-        }
-    }
+
+    emit signalRecv(_recvBuff);
+    memset(_msgBuff, 0 , RECV_BUFF_SIZE);
+    memset(_recvBuff, 0 , RECV_BUFF_SIZE);
+//    memcpy(_msgBuff, _recvBuff, nlen);
+//    _lastpos += nlen;
+//    while(_lastpos >= sizeof(DataHeader))
+//    {
+
+//        DataHeader* header = nullptr;
+//        char bbb[sizeof (DataHeader)];
+//        memcpy(bbb, _msgBuff, sizeof (DataHeader) );
+//        header = (DataHeader*)bbb;
+//        if(_lastpos >= header->datalength )//&& header->datalength != 0
+//        {
+//            int t = header->datalength;
+//            int nsize = _lastpos - header->datalength;
+//            memcpy(_msgBuff, _msgBuff + header->datalength, nsize);
+//            _lastpos = nsize;
+//        }
+//        else
+//        {
+//            break;
+//        }
+//    }
     return 0;
 
 }
-int TCPClient::data_factory(DataHeader* header)
-{
-    switch(header->cmd)
-    {
-//        case CMD_LOGRET:
-//        {
-//            LogRet logr = {};
-//            logr = *(LogRet*)header;
-////            if(logr.ret == 1)
-////            {
-////                emit signal_log_result();
-////            }
-//            emit signal_log_result(logr.ret);
 
-//        }
-//        break;
-//        case CMD_REGISRET:
-//        {
-//            RegisRet ret = {};
-//            ret = *(RegisRet*)header;
-//            emit signal_regis_result(ret);
-//        }
-//        break;
-    }
-    return 0;
-}
 
 
 int TCPClient::send_data(DataHeader *data)
@@ -189,6 +188,15 @@ int TCPClient::send_data(DataHeader *data)
     if(is_run())
     {
         return send(_client, d, data->datalength, 0);
+    }
+    return SOCKET_ERROR;
+}
+
+int TCPClient::sendData(char *data, int len)
+{
+    if(is_run())
+    {
+        return send(_client, data, len, 0);
     }
     return SOCKET_ERROR;
 }
