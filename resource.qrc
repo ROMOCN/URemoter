@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resource/image/imgAudio.png</file>
+        <file>resource/image/imgControl.png</file>
+        <file>resource/image/imgShare.png</file>
+        <file>resource/image/imgVideo.png</file>
+    </qresource>
+</RCC>

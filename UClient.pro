@@ -18,9 +18,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     Client/tcpclient.cpp \
     Client/udpclient.cpp \
+    Controls/ctrlexpandbtn.cpp \
     Controls/ctrlinfowidget.cpp \
+    Controls/ctrllivecentre.cpp \
+    Controls/ctrllivecontrol.cpp \
     Controls/ctrlmenu.cpp \
     Tools/toolaudio.cpp \
+    Tools/toolgrapwindow.cpp \
+    Tools/tooljudgeequipment.cpp \
+    Tools/toolnetstate.cpp \
     Tools/toolsound.cpp \
     Tools/toolvideo.cpp \
     VideoWidget//videopanel.cpp \
@@ -32,9 +38,15 @@ HEADERS += \
     Client/sockcmd.h \
     Client/tcpclient.h \
     Client/udpclient.h \
+    Controls/ctrlexpandbtn.h \
     Controls/ctrlinfowidget.h \
+    Controls/ctrllivecentre.h \
+    Controls/ctrllivecontrol.h \
     Controls/ctrlmenu.h \
     Tools/toolaudio.h \
+    Tools/toolgrapwindow.h \
+    Tools/tooljudgeequipment.h \
+    Tools/toolnetstate.h \
     Tools/toolscreen.h \
     Tools/toolsound.h \
     Tools/toolvideo.h \
@@ -57,3 +69,6 @@ INCLUDEPATH += C:\Opencv\OpenCV-MinGW-Build-OpenCV-4.5.2-x64\include
 LIBS += C:\Opencv\opencv\opencv_build\lib\libopencv_*.a
 
 #CONFIG      += console
+
+RESOURCES += \
+    resource.qrc

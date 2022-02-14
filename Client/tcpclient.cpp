@@ -51,7 +51,7 @@ int TCPClient::initial_sock(QString &msg)
     {
         msg = "初始化成功";
     }
-    qDebug()<<msg;
+    qDebug()<<"tcpClient"<<msg;
 
     return 0;
 }
@@ -65,7 +65,7 @@ int TCPClient::connect_server(char* ip, unsigned short port, QString &msg)
         if(initial_sock(rmsg) == -1)
             msg = "连接失败，初始化失败;";
         msg += rmsg;
-        qDebug()<<msg;
+        qDebug()<<"tcpClient"<<msg;
         result = -1;
     }else{
         _sin.sin_family = AF_INET;
@@ -78,12 +78,12 @@ int TCPClient::connect_server(char* ip, unsigned short port, QString &msg)
         int ret = ::connect(_client, (sockaddr*)&_sin, sizeof(sockaddr_in)); // ::  winsock2中connect与qobject中connect冲突问题
         if(ret == SOCKET_ERROR){
             msg = "连接服务器失败";
-            qDebug()<<msg;
+            qDebug()<<"tcpClient"<<msg;
             result = -1;
         }
         else{
            msg = "成功连接服务器";
-           qDebug()<<msg.toStdString().c_str();
+           qDebug()<<"tcpClient"<<msg.toStdString().c_str();
 
         }
     }
@@ -147,7 +147,7 @@ int TCPClient::recv_data(QString &msg)
     {
         msg = "Lost connection to server";
         emit signalNetState(0);
-        qDebug()<<msg;
+        qDebug()<<"tcpClient"<<msg;
         connect_server("192.168.1.102", 8000, msg);
         return -1;
     }

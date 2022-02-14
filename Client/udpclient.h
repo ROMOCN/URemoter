@@ -23,7 +23,6 @@
 #define INVALID_SOCKET (SOCKET)(~0)
 #define SOCKET_ERROR			(~1)
 #endif // _WIN32
-#define BIG_DATA_SIZE 10240
 #include <QString>
 #include <QObject>
 #include <QVariant>
@@ -41,7 +40,7 @@ using namespace CMD;
 class UDPClient : public QObject
 {
     Q_OBJECT
-    const static int RECV_BUFF_SIZE = 102400;
+    const static int RECV_BUFF_SIZE = 1024 * 64;
     SOCKET _client;
     int _lastpos;//记录消息长度
     char _msgBuff[RECV_BUFF_SIZE * 10];

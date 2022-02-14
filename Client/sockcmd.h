@@ -121,7 +121,7 @@ enum ENUM_CMD: short{
                     }
                 }
             }
-            qDebug()<<jsonError.errorString();
+            qDebug()<<"jsonError:"<<jsonError.errorString();
             return baseData;
         }
 

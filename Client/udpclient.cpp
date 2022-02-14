@@ -10,7 +10,6 @@ UDPClient::UDPClient(QObject *parent) : QObject(parent)
 
 }
 
-
 UDPClient::~UDPClient()
 {
     close_sock();
@@ -38,7 +37,7 @@ int UDPClient::initial_sock(QString &msg)
     {
         msg = "初始化成功";
     }
-    qDebug()<<msg;
+    qDebug()<<"udpClient"<<msg;
 
     return 0;
 }
@@ -74,7 +73,7 @@ int UDPClient::bindPort(const char* ip, unsigned short port)
     else{
         errormsg = "绑定成功.\n";
     }
-    qDebug()<<errormsg;
+    qDebug()<<"udpClient"<<errormsg;
     return ret;
 }
 
@@ -135,14 +134,14 @@ int UDPClient::recv_data(QString &msg)
     if(nlen < 0)
     {
         msg = "与服务器连接中断";
-        qDebug()<<msg;
+        qDebug()<<"udpClient"<<msg;
         reasult = -1;
     }else if(nlen ==0){
 
     }else
     {
         emit signalRecv(_recvBuff);
-        memset(_msgBuff, 0 , RECV_BUFF_SIZE);
+       // memset(_msgBuff, 0 , RECV_BUFF_SIZE);
         memset(_recvBuff, 0 , RECV_BUFF_SIZE);
 
 //        QByteArray baseData = QByteArray::fromBase64(strData.toLatin1());

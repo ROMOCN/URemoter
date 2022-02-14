@@ -14,29 +14,20 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     udpClient->close_sock();
+    delete centre;
     delete ui;
 }
 
-void MainWindow::startOrStop()
-{
-    if(t_video->isRunning()){
-        t_video->stop();
-        tAudio->stopRecord();
-    }else{
-        t_video->start();
-        tAudio->startRecord();
-    }
-}
+
 
 void MainWindow::slotRecVideo(QImage img)
 {
-    img = img.mirrored(true, false);
     lab_video->setVideo(img, 1);
 }
 
 void MainWindow::slotRecvAudio(QByteArray audio)
 {
-    tAudio->soltPlay(audio);
+    centre->recvAudio(audio);
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)
@@ -45,18 +36,27 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     menuEdge->resize(80, this->size().height());
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    centre->close();
+
+}
+
 
 void MainWindow::init()
 {
     this->resize(1200 ,900 );
     QString msg;
-    t_video = new ToolVideo(this);
+
+    centre = new CtrlLiveCentre();
+    centre->show();
+
     udpClient = new UDPClient();
     tcpClient = new TCPClient();
     menuEdge = new CtrlMenu(this);
     infoWidget = new CtrlInfoWidget(this);
     lab_video = new VideoWidget(this);
-    tAudio = new ToolAudio(this);
+
     infoWidget->move(menuEdge->minWidth, 0);
     {
         QSize size = this->size();
@@ -102,16 +102,19 @@ void MainWindow::initThread()
 void MainWindow::initSignal()
 {
     //qRegisterMetaType<QByteArray>("QByteArray");
+
     connect(tcpClient, &TCPClient::signalRecv, this, &MainWindow::signalTCPRecv);
     connect(udpClient, &UDPClient::signalRecv, this, &MainWindow::signalUDPRecv);
     connect(this, &MainWindow::signalTCPRecv, this, &MainWindow::slotTCPRecv);
     connect(this, &MainWindow::signalUDPRecv, this, &MainWindow::slotUDPRecv);
     connect(infoWidget, &CtrlInfoWidget::signalCreateRoom, this, &MainWindow::slotCreateRoom);
     connect(infoWidget, &CtrlInfoWidget::signalJoinRoom, this, &MainWindow::slotJoinRoom);
-    connect(udpClient, &UDPClient::signalAudio, this, &MainWindow::slotRecVideo);
+    //connect(udpClient, &UDPClient::signalAudio, this, &MainWindow::slotRecVideo);
     connect(tcpClient,&TCPClient::signalNetState, menuEdge, &CtrlMenu::setNetState);
-    connect(t_video, &ToolVideo::pullImage, this, &MainWindow::slotPullVideo);
-    connect(tAudio, &ToolAudio::signalPushSound, this ,&MainWindow::slotPullAudio);
+    connect(centre, &CtrlLiveCentre::signalPushImg, this, &MainWindow::slotPushVideo);
+    connect(centre, &CtrlLiveCentre::signalPushAudio, this, &MainWindow::slotPushAudio);
+
+
 }
 
 void MainWindow::slotTCPRecv(QByteArray data)
@@ -132,17 +135,24 @@ void MainWindow::slotTCPRecv(QByteArray data)
 void MainWindow::slotUDPRecv(QByteArray data)
 {
     CMD::ENUM_STREAM myStream;
-    QByteArray baseData = QByteArray::fromBase64(CMD::JsonTool::analyseData(data, "Data", myStream));
+    QByteArray anaData = CMD::JsonTool::analyseData(data, "Data", myStream);
     switch (myStream) {
     case ENUM_STREAM::STREAM_VIDEO:
     {
+//        anaData =  qUncompress(anaData);
+        QByteArray baseData = QByteArray::fromBase64(anaData);
+
+        baseData = qUncompress(baseData);
         QImage image;
         if(image.loadFromData(baseData))
             slotRecVideo(image);
     }
         break;
     case ENUM_STREAM::STREAM_AUDIO:
+    {
+        QByteArray baseData = QByteArray::fromBase64(anaData);
         slotRecvAudio(baseData);
+    }
         break;
     }
 
@@ -152,7 +162,6 @@ void MainWindow::slotCreateRoom()
 {
     infoWidget->hide();
     lab_video->show();
-    startOrStop();
     QByteArray s = CMD::JsonTool::creatRoom(UID);
     tcpClient->sendData(s.data(), s.size());
 }
@@ -161,15 +170,16 @@ void MainWindow::slotJoinRoom(int roomID)
 {
     infoWidget->hide();
     lab_video->show();
-    startOrStop();
     QByteArray data = CMD::JsonTool::joinRoom(roomID);
     int sendret =  tcpClient->sendData(data.data(), data.size());
 }
 
-void MainWindow::slotPullVideo(QImage img)
+void MainWindow::slotPushVideo(QImage img)
 {
         int size = 0;
         QByteArray buff = imgToQByte(img);
+        //img.save("C:/Users/49776/Desktop/jietu.jpg");
+        //QByteArray buff = imgToQByte(img);
         size = buff.size();
 //        //数据加密
 //        QByteArray base64Byte = buff.toBase64();
@@ -177,17 +187,21 @@ void MainWindow::slotPullVideo(QImage img)
 //        QByteArray compressByte = qCompress(base64Byte,1);
         //-----------------json-------------------------
         QByteArray byteArray = CMD::JsonTool::sendStream(buff);
+
         //-----------------json-------------------------
         //udpClient->sendData("127.0.0.1",8888, byteArray.data(), byteArray.size());
-//        udpClient->sendData("192.168.1.107",8888, byteArray.data(), byteArray.size());
+        udpClient->sendData("192.168.1.103",8888, byteArray.data(), byteArray.size());
         udpClient->sendData("192.168.1.103",8001, byteArray.data(), byteArray.size());
-        lab_video->setVideo(img.mirrored(true, false));
+        //lab_video->setVideo(img.mirrored(true, false));
+        lab_video->setVideo(img);
+        //lab_video->setVideo(screen,1);
 }
 
-void MainWindow::slotPullAudio(QByteArray data)
+void MainWindow::slotPushAudio(QByteArray data)
 {
     int size = 0;
     QByteArray buff(data);
+    //slotRecvAudio(data);
     size = buff.size();
 //  //数据加密
 //  QByteArray base64Byte = buff.toBase64();
@@ -195,6 +209,8 @@ void MainWindow::slotPullAudio(QByteArray data)
 //  QByteArray compressByte = qCompress(base64Byte,1);
     //-----------------json-------------------------
     QByteArray byteArray = CMD::JsonTool::sendStream(buff.toBase64(), ENUM_STREAM::STREAM_AUDIO);
+
+
     //-----------------json-------------------------
     //udpClient->sendData("127.0.0.1",8888, byteArray.data(), byteArray.size());
 //        udpClient->sendData("192.168.1.107",8888, byteArray.data(), byteArray.size());

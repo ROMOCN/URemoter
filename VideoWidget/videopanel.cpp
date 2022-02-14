@@ -15,6 +15,8 @@ VideoPanel::VideoPanel(QWidget *parent) : QWidget(parent)
     this->initMenu();
     this->show_video_all();
     QTimer::singleShot(1000, this, SLOT(play_video_all()));
+
+    //show_video_8();
 }
 
 bool VideoPanel::eventFilter(QObject *watched, QEvent *event)
@@ -80,7 +82,7 @@ void VideoPanel::initForm()
 
     videoMax = false;
     videoCount = 64;
-    videoType = "1_16";
+    videoType = "1_8";
 
     for (int i = 0; i < videoCount; i++) {
         QLabel *widget = new QLabel;

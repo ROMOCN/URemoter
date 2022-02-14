@@ -10,11 +10,11 @@
 #include <QPushButton>
 #include "Client/udpclient.h"
 #include "Client/tcpclient.h"
-#include "Tools/toolvideo.h"
-#include "Tools/toolaudio.h"
+
 #include "VideoWidget/videowidget.h"
 #include "Controls/ctrlmenu.h"
 #include "Controls/ctrlinfowidget.h"
+#include "Controls/ctrllivecentre.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -24,21 +24,20 @@ class MainWindow : public QWidget
     UDPClient *udpClient = nullptr;
     TCPClient *tcpClient = nullptr;
     VideoWidget *lab_video = nullptr;
-    ToolVideo *t_video = nullptr;
-    ToolAudio *tAudio = nullptr;
+
     CtrlMenu *menuEdge = nullptr;
     CtrlInfoWidget *infoWidget = nullptr;
+    CtrlLiveCentre *centre = nullptr;
     int UID = 0;
     int RoomID = 0;
      Ui::MainWindow *ui;
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void startOrStop();
     void slotRecVideo(QImage img);
     void slotRecvAudio(QByteArray audio);
-    void slotPullVideo(QImage img);
-    void slotPullAudio(QByteArray data);
+    void slotPushVideo(QImage img);
+    void slotPushAudio(QByteArray data);
     static unsigned char* charToUc(char* read_buff)
     {
         return  reinterpret_cast<unsigned char*> (read_buff);
@@ -51,13 +50,37 @@ public:
     {
         QByteArray imageData;
         QBuffer buffer(&imageData);
-        image.save(&buffer, "jpg");
+        image.save(&buffer, "jpg");    
+
+        imageData = qCompress(imageData);//使用默认的zlib压缩
+        qDebug() << "压缩后字节大小:" << buffer.size();
+
         imageData = imageData.toBase64();
+
+
         return imageData;
     }
     QImage qbyteToImg(const QString &data)
     {
-        QByteArray imageData = QByteArray::fromBase64(data.toLatin1());
+        QByteArray dataUnCom = data.toLatin1();
+        dataUnCom = qUncompress(dataUnCom);
+        QByteArray imageData = QByteArray::fromBase64(dataUnCom);
+
+        imageData = qUncompress(imageData);
+        qDebug() << "解压缩后字节大小:" << imageData.size();
+
+        QImage image;
+        image.loadFromData(imageData);
+        return image;
+    }
+    QImage qbyteToImg(const QByteArray data)
+    {
+        QByteArray imageData = qUncompress(data);
+        imageData = QByteArray::fromBase64(imageData);
+
+        imageData = qUncompress(imageData);
+        qDebug() << "解压缩后字节大小:" << imageData.size();
+
         QImage image;
         image.loadFromData(imageData);
         return image;
@@ -77,5 +100,6 @@ private:
     void initThread();
     void initSignal();
     void resizeEvent(QResizeEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
 };
 #endif // MAINWINDOW_H

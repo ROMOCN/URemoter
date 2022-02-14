@@ -12,7 +12,7 @@ ToolVideo::~ToolVideo()
 
 void ToolVideo::init()
 {
-    timer = new QTimer();
+    timer = new QTimer(this);
     connect(timer,&QTimer::timeout,this,&ToolVideo::running);
     connect(this, &ToolVideo::signalStart, this, &ToolVideo::startCamera);
     //        //# 获取视频帧的宽
@@ -27,9 +27,9 @@ void ToolVideo::init()
     //    capture.set(CAP_PROP_FRAME_WIDTH, this->size().height());
 }
 
-void ToolVideo::start()
+void ToolVideo::start(int interval)
 {
-    emit signalStart();
+    emit signalStart(interval);
 }
 
 void ToolVideo::stop()
@@ -52,32 +52,29 @@ void ToolVideo::running()
         Mat frame;
         capture >> frame;
         QImage img = MatImageToQt(frame);
+        img = img.mirrored(true, false);
         emit pullImage(img);
     }
 }
 
-void ToolVideo::startCamera()
+void ToolVideo::startCamera(int interval)
 {
     if(!capture.isOpened()){
-
-
-        std::thread *t = new std::thread([=](){
+        std::thread t =  std::thread([=](){
             //capture.open(0);
-
-            //1.打开摄像机设备（默认第一个）
-            capture= cv::VideoCapture(0);
-
             //2.一定要先设置采集格式！！！
             capture.set(6, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));  //CV_CAP_PROP_FOURCC	6	4个字符表示的视频编码器格式
             //3.然后再设置高清采集分辨率
     //        capture.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
     //        capture.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
+
+            //1.打开摄像机设备（默认第一个）
+            capture= cv::VideoCapture(0);
         });
-
-
-        timer->start(30);
-        t->join();
-        delete  t;
+        timer->start(interval);
+        t.detach();
+//        t->join();
+//        delete  t;
     }
 }
 
