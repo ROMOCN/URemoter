@@ -10,11 +10,11 @@
 #include <thread>
 #include <QBuffer>
 #include <QPixmap>
-using namespace cv;
+
 class ToolVideo : public QObject
 {
     Q_OBJECT
-    VideoCapture capture;
+    cv::VideoCapture capture;
     QTimer *timer = nullptr;
 
 public:
@@ -29,8 +29,8 @@ public:
         timer->setInterval(interval);
     }
 
-    QImage MatImageToQt(const Mat &src);
-    QImage Compress(Mat mat);
+    QImage MatImageToQt(const cv::Mat &src);
+    QImage Compress(cv::Mat mat);
 signals:
     void pullImage(QImage img);
     void signalStart(int interval = 30);

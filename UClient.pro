@@ -63,6 +63,10 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+#调用GDI 用于捕获屏幕时附带鼠标
+QT += winextras
+LIBS += -lgdi32 -luser32
+
 
 LIBS += -lpthread libwsock32 libws2_32
 LIBS += -lWinMM

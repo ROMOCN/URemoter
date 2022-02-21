@@ -54,7 +54,7 @@ bool ToolVideo::isRunning()
 void ToolVideo::running()
 {
     if(capture.isOpened()){
-        Mat frame;
+        cv::Mat frame;
         capture >> frame;
         QImage img = MatImageToQt(frame);
         img = img.mirrored(true, false);
@@ -87,7 +87,7 @@ void ToolVideo::startCamera(int interval)
 }
 
 
-QImage ToolVideo::MatImageToQt(const Mat &src)
+QImage ToolVideo::MatImageToQt(const cv::Mat &src)
 {
     //CV_8UC1 8位无符号的单通道---灰度图片
     if(src.type() == CV_8UC1)
@@ -143,14 +143,14 @@ QImage ToolVideo::MatImageToQt(const Mat &src)
     }
 }
 
-QImage ToolVideo::Compress(Mat mat)
+QImage ToolVideo::Compress(cv::Mat mat)
 {
     QImage img;
     //param2为压缩参数，50代表压缩比例，该值范围在0-100，越小代表压缩力度越大
 
-    imwrite("E:/code/conputer_visual/data/2.jpg", mat, {IMWRITE_JPEG_QUALITY, 50});
+    imwrite("E:/code/conputer_visual/data/2.jpg", mat, {cv::IMWRITE_JPEG_QUALITY, 50});
     //param2为压缩参数，50代表压缩比例，该值范围在0-9，越小代表压缩力度越小
-    imwrite("E:/code/conputer_visual/data/3.png", mat, {IMWRITE_PNG_COMPRESSION, 9});
+    imwrite("E:/code/conputer_visual/data/3.png", mat, {cv::IMWRITE_PNG_COMPRESSION, 9});
 
     return img;
 }

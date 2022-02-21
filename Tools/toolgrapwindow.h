@@ -7,6 +7,7 @@
 #include <QDesktopWidget>
 #include <QTimer>
 //#include "QtWinExtras/qwinfunctions.h"
+#include <QtWin>
 class ToolGrapWindow : public QObject
 {
     Q_OBJECT
@@ -14,7 +15,7 @@ class ToolGrapWindow : public QObject
 public:
     explicit ToolGrapWindow(QObject *parent = nullptr);
     QPixmap static grapWithOutMouse(WId window = QApplication::desktop()->winId(), int x = 0, int y = 0, int width = -1, int height = -1);
-    QPixmap static grapWithMouse(HWND winId, int x, int y, int w, int h);
+    QPixmap static grapWithMouse(HWND winId= (HWND)QApplication::desktop()->winId(), int x = 0, int y = 0, int width = 1920, int height = 1080);
     void start(int interval = 30);
     void changeInterval(int interval);
     void stop();

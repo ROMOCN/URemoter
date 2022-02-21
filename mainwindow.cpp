@@ -266,13 +266,15 @@ void MainWindow::slotPushVideo(QImage img)
 //        lab_video->setVideo(img);
 //        //lab_video->setVideo(screen,1);
 
+        lab_video->setVideo(img);
         QQueue<QByteArray> datas = CMD::JsonTool::sendBigStream(buff);
 
         while(datas.count() > 0){
             QByteArray jsondata =  datas.front();
             datas.pop_front();
-            udpClient->sendData("192.168.5.5",8001, jsondata.data(), jsondata.size());//8001
+            udpClient->sendData("192.168.73.1",8888, jsondata.data(), jsondata.size());//8001
         }
+
 
 }
 
