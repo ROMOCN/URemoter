@@ -78,7 +78,7 @@ LIBS += D:\ALLLIB\ffmpeg\ffmpeg-n4.4-latest-win64-gpl-shared-4.4\lib\av*.lib \
         D:\ALLLIB\ffmpeg\ffmpeg-n4.4-latest-win64-gpl-shared-4.4\lib\sw*.lib
 
 
-#CONFIG      += console
+CONFIG      += console
 
 RESOURCES += \
     resource.qrc

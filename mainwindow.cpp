@@ -20,6 +20,22 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+QString MainWindow::getLocalIP() const
+{
+    QString ip;
+    QString localHostName = "";
+    localHostName = QHostInfo::localHostName();
+    QHostInfo info = QHostInfo::fromName(localHostName);
+    qDebug()<<info.addresses();
+    foreach(QHostAddress address,info.addresses()){
+         if(address.protocol() == QAbstractSocket::IPv4Protocol){
+            ip = address.toString();
+         }
+    }
+    qDebug() << ip;
+    return ip;
+}
+
 
 
 void MainWindow::slotRecVideo(QImage img)
@@ -73,7 +89,18 @@ void MainWindow::init()
     udpClient->initial_sock(msg);
     udpClient->bindPort("0.0.0.0", 8888);
     tcpClient->initial_sock(msg);
-    tcpClient->connect_server("192.168.5.5", 8000, msg);
+
+    QString ip = getLocalIP();
+//    qDebug()<<"local ip is : " << ip;
+//    qDebug()<<"do you want to change it? y/n";
+//    std::string ret;
+//    scanf("%s", &ret);
+//    if(ret == "y" || ret == "yes" ||ret == "Y" || ret == "YES"){
+//        qDebug()<<"new ip is:";
+//        scanf("%s", &ip);
+//    }
+
+    tcpClient->connect_server(ip.toLocal8Bit().data(), 8000, msg);
     lab_video->move(menuEdge->minWidth,0);
     lab_video->setWindowFlags(lab_video->windowFlags() | Qt::WindowStaysOnBottomHint);
 

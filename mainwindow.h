@@ -34,6 +34,7 @@ class MainWindow : public QWidget
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    QString getLocalIP() const;
     void slotRecVideo(QImage img);
     void slotRecvAudio(QByteArray audio);
     void slotPushVideo(QImage img);
