@@ -1,8 +1,13 @@
 #include "toolvideo.h"
 
+#include <vector>
+
 ToolVideo::ToolVideo(QObject *parent) : QObject(parent)
 {
     init();
+    //VideoWriter writer("VideoTest.avi", CV_FOURCC('M', 'J', 'P', 'G'), 25.0, Size(640, 480));
+
+
 }
 
 ToolVideo::~ToolVideo()
@@ -53,6 +58,9 @@ void ToolVideo::running()
         capture >> frame;
         QImage img = MatImageToQt(frame);
         img = img.mirrored(true, false);
+
+
+        //writer << frame;
         emit pullImage(img);
     }
 }
@@ -133,4 +141,16 @@ QImage ToolVideo::MatImageToQt(const Mat &src)
     {
         return QImage();
     }
+}
+
+QImage ToolVideo::Compress(Mat mat)
+{
+    QImage img;
+    //param2为压缩参数，50代表压缩比例，该值范围在0-100，越小代表压缩力度越大
+
+    imwrite("E:/code/conputer_visual/data/2.jpg", mat, {IMWRITE_JPEG_QUALITY, 50});
+    //param2为压缩参数，50代表压缩比例，该值范围在0-9，越小代表压缩力度越小
+    imwrite("E:/code/conputer_visual/data/3.png", mat, {IMWRITE_PNG_COMPRESSION, 9});
+
+    return img;
 }

@@ -24,6 +24,7 @@ SOURCES += \
     Controls/ctrllivecontrol.cpp \
     Controls/ctrlmenu.cpp \
     Tools/toolaudio.cpp \
+    Tools/toolencoder.cpp \
     Tools/toolgrapwindow.cpp \
     Tools/tooljudgeequipment.cpp \
     Tools/toolnetstate.cpp \
@@ -44,6 +45,7 @@ HEADERS += \
     Controls/ctrllivecontrol.h \
     Controls/ctrlmenu.h \
     Tools/toolaudio.h \
+    Tools/toolencoder.h \
     Tools/toolgrapwindow.h \
     Tools/tooljudgeequipment.h \
     Tools/toolnetstate.h \
@@ -67,6 +69,14 @@ LIBS += -lWinMM
 
 INCLUDEPATH += C:\Opencv\OpenCV-MinGW-Build-OpenCV-4.5.2-x64\include
 LIBS += C:\Opencv\opencv\opencv_build\lib\libopencv_*.a
+
+#FFmpeg
+
+INCLUDEPATH += D:\ALLLIB\ffmpeg\ffmpeg-n4.4-latest-win64-gpl-shared-4.4\include
+LIBS += D:\ALLLIB\ffmpeg\ffmpeg-n4.4-latest-win64-gpl-shared-4.4\lib\av*.lib \
+        D:\ALLLIB\ffmpeg\ffmpeg-n4.4-latest-win64-gpl-shared-4.4\lib\postproc.lib \
+        D:\ALLLIB\ffmpeg\ffmpeg-n4.4-latest-win64-gpl-shared-4.4\lib\sw*.lib
+
 
 #CONFIG      += console
 

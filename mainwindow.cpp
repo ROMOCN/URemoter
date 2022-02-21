@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QTime>
+
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -71,7 +73,7 @@ void MainWindow::init()
     udpClient->initial_sock(msg);
     udpClient->bindPort("0.0.0.0", 8888);
     tcpClient->initial_sock(msg);
-    tcpClient->connect_server("192.168.1.103", 8000, msg);
+    tcpClient->connect_server("192.168.5.5", 8000, msg);
     lab_video->move(menuEdge->minWidth,0);
     lab_video->setWindowFlags(lab_video->windowFlags() | Qt::WindowStaysOnBottomHint);
 
@@ -134,28 +136,71 @@ void MainWindow::slotTCPRecv(QByteArray data)
 
 void MainWindow::slotUDPRecv(QByteArray data)
 {
-    CMD::ENUM_STREAM myStream;
-    QByteArray anaData = CMD::JsonTool::analyseData(data, "Data", myStream);
-    switch (myStream) {
-    case ENUM_STREAM::STREAM_VIDEO:
-    {
-//        anaData =  qUncompress(anaData);
-        QByteArray baseData = QByteArray::fromBase64(anaData);
+    static int cmdId = 0;
+    static QVector<QByteArray> Datas;
+    static long time = 0;
+    if(data.size() > 0){
+        CMD::ENUM_STREAM myStream;
+        QByteArray anaData = CMD::JsonTool::analyseData(data, "Data", myStream);
+        if(anaData.size() > 0){
+            switch (myStream) {
+            case ENUM_STREAM::STREAM_VIDEO:
+            {
+                int tempCID = CMD::JsonTool::analyseID(data,"CMDID");
+                int packNum = CMD::JsonTool::analyseID(data,"Number");
+                int packIndex = CMD::JsonTool::analyseID(data,"Index");
+                if(tempCID == 0){
+                    QByteArray baseData = QByteArray::fromBase64(anaData);
+                    baseData = qUncompress(baseData);
+                    QImage image;
+                    if(image.loadFromData(baseData))
+                        slotRecVideo(image);
+                }else{
+                    if(tempCID != cmdId){
+                        mergeDatas(Datas);
+                        time = CMD::GetTime();
+                        cmdId = tempCID;
+                        Datas.clear();
+                        Datas.resize(packNum);
+                        Datas[packIndex] = anaData.data();
 
+                    }else{
+                        long tempTime = CMD::GetTime();
+                        Datas[packIndex] = anaData.data();
+
+                    }
+                }
+
+
+
+            }
+                break;
+            case ENUM_STREAM::STREAM_AUDIO:
+            {
+                QByteArray baseData = QByteArray::fromBase64(anaData);
+                slotRecvAudio(baseData);
+            }
+                break;
+            }
+
+        }
+    }
+}
+void MainWindow::mergeDatas(QVector<QByteArray> Datas){
+    if(Datas.size() > 0){
+        QByteArray data;
+        for(auto i : Datas){
+            if(i.isEmpty() || i.isNull()){
+                return;
+            }
+            data.push_back(i);
+        }
+        QByteArray baseData = QByteArray::fromBase64(data);
         baseData = qUncompress(baseData);
         QImage image;
         if(image.loadFromData(baseData))
             slotRecVideo(image);
     }
-        break;
-    case ENUM_STREAM::STREAM_AUDIO:
-    {
-        QByteArray baseData = QByteArray::fromBase64(anaData);
-        slotRecvAudio(baseData);
-    }
-        break;
-    }
-
 }
 
 void MainWindow::slotCreateRoom()
@@ -179,22 +224,29 @@ void MainWindow::slotPushVideo(QImage img)
         int size = 0;
         QByteArray buff = imgToQByte(img);
         //img.save("C:/Users/49776/Desktop/jietu.jpg");
-        //QByteArray buff = imgToQByte(img);
         size = buff.size();
 //        //数据加密
 //        QByteArray base64Byte = buff.toBase64();
 //        //数据压缩算法
 //        QByteArray compressByte = qCompress(base64Byte,1);
-        //-----------------json-------------------------
-        QByteArray byteArray = CMD::JsonTool::sendStream(buff);
 
-        //-----------------json-------------------------
-        //udpClient->sendData("127.0.0.1",8888, byteArray.data(), byteArray.size());
-        udpClient->sendData("192.168.1.103",8888, byteArray.data(), byteArray.size());
-        udpClient->sendData("192.168.1.103",8001, byteArray.data(), byteArray.size());
-        //lab_video->setVideo(img.mirrored(true, false));
-        lab_video->setVideo(img);
-        //lab_video->setVideo(screen,1);
+//        //-----------------json-------------------------
+//        QByteArray byteArray = CMD::JsonTool::sendStream(buff);
+//        //-----------------json-------------------------
+//        //udpClient->sendData("192.168.5.5",8888, byteArray.data(), byteArray.size());
+//        udpClient->sendData("192.168.5.5",8001, byteArray.data(), byteArray.size());
+//        //lab_video->setVideo(img.mirrored(true, false));
+//        lab_video->setVideo(img);
+//        //lab_video->setVideo(screen,1);
+
+        QQueue<QByteArray> datas = CMD::JsonTool::sendBigStream(buff);
+
+        while(datas.count() > 0){
+            QByteArray jsondata =  datas.front();
+            datas.pop_front();
+            udpClient->sendData("192.168.5.5",8001, jsondata.data(), jsondata.size());//8001
+        }
+
 }
 
 void MainWindow::slotPushAudio(QByteArray data)
@@ -214,6 +266,6 @@ void MainWindow::slotPushAudio(QByteArray data)
     //-----------------json-------------------------
     //udpClient->sendData("127.0.0.1",8888, byteArray.data(), byteArray.size());
 //        udpClient->sendData("192.168.1.107",8888, byteArray.data(), byteArray.size());
-    udpClient->sendData("192.168.1.103",8001, byteArray.data(), byteArray.size());
+    udpClient->sendData("192.168.5.5",8001, byteArray.data(), byteArray.size());
 }
 

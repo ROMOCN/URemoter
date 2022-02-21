@@ -101,5 +101,6 @@ private:
     void initSignal();
     void resizeEvent(QResizeEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
+    void mergeDatas(QVector<QByteArray> Datas);
 };
 #endif // MAINWINDOW_H

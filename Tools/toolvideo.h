@@ -30,6 +30,7 @@ public:
     }
 
     QImage MatImageToQt(const Mat &src);
+    QImage Compress(Mat mat);
 signals:
     void pullImage(QImage img);
     void signalStart(int interval = 30);
